@@ -3,32 +3,30 @@ package com.ake3m.dns.converter;
 import com.ake3m.dns.model.DNSHeader;
 import com.ake3m.dns.model.Rcode;
 
+import static com.ake3m.dns.converter.ByteConverter.readBits;
+import static com.ake3m.dns.converter.ByteConverter.readU16;
+
 /**
  * This was implemented following the RFC 1035
  * <a href="https://www.rfc-editor.org/rfc/rfc1035#section-4.1.1">4.1.1. Header section format</a>
  */
 public class DNSHeaderEntityConverter {
 
-    private static final int UNSIGNED_MASK = 0xFF;
-    private static final int NIBBLE_MASK = 0xF;
-    private static final int THREE_BIT_MASK = 0x7;
-    private static final int BIT_MASK = 0x1;
-
     public Result<DNSHeader> read(byte[] in) {
-        int id = (in[0] & UNSIGNED_MASK) << 8 | in[1] & UNSIGNED_MASK;
-        int flags = (in[2] & UNSIGNED_MASK) << 8 | in[3] & UNSIGNED_MASK;
-        int qr = flags >> 15;
-        int opcode = (flags >> 11) & NIBBLE_MASK;
-        int aa = (flags >> 10) & BIT_MASK;
-        int tc = (flags >> 9) & BIT_MASK;
-        int rd = (flags >> 8) & BIT_MASK;
-        int ra = (flags >> 7) & BIT_MASK;
-        int z = (flags >> 4) & THREE_BIT_MASK;
-        int rcode = flags & NIBBLE_MASK;
-        int qdcount = (in[4] & UNSIGNED_MASK) << 8 | in[5] & UNSIGNED_MASK;
-        int ancount = (in[6] & UNSIGNED_MASK) << 8 | in[7] & UNSIGNED_MASK;
-        int nscount = (in[8] & UNSIGNED_MASK) << 8 | in[9] & UNSIGNED_MASK;
-        int arcount = (in[10] & UNSIGNED_MASK) << 8 | in[11] & UNSIGNED_MASK;
+        int id = readU16(in, 0);
+        int flags = readU16(in, 2);
+        int qr = readBits(flags, 15, 1);
+        int opcode = readBits(flags, 11, 4);
+        int aa = readBits(flags, 10, 1);
+        int tc = readBits(flags, 9, 1);
+        int rd = readBits(flags, 8, 1);
+        int ra = readBits(flags, 7, 1);
+        int z = readBits(flags, 4, 3);
+        int rcode = readBits(flags, 0, 4);
+        int qdcount = readU16(in, 4);
+        int ancount = readU16(in, 6);
+        int nscount = readU16(in, 8);
+        int arcount = readU16(in, 10);
         return new Result<>(
                 new DNSHeader(id,
                         qr,
