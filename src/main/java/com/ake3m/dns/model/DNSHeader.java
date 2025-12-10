@@ -13,6 +13,10 @@ public record DNSHeader(
         int rd,
         int ra,
         int z,
-        Rcode rcode
+        Rcode rcode,
+        int qdcount,
+        int ancount,
+        int nscount,
+        int arcount
 ) {
 }

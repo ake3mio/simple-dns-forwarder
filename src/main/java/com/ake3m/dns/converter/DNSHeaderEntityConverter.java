@@ -9,10 +9,10 @@ import com.ake3m.dns.model.Rcode;
  */
 public class DNSHeaderEntityConverter {
 
-    public static final int UNSIGNED_MASK = 0xFF;
-    public static final int NIBBLE_MASK = 0xF;
-    public static final int THREE_BIT_MASK = 0x7;
-    public static final int BIT_MASK = 0x1;
+    private static final int UNSIGNED_MASK = 0xFF;
+    private static final int NIBBLE_MASK = 0xF;
+    private static final int THREE_BIT_MASK = 0x7;
+    private static final int BIT_MASK = 0x1;
 
     public Result<DNSHeader> read(byte[] in) {
         int id = (in[0] & UNSIGNED_MASK) << 8 | in[1] & UNSIGNED_MASK;
@@ -25,6 +25,25 @@ public class DNSHeaderEntityConverter {
         int ra = (flags >> 7) & BIT_MASK;
         int z = (flags >> 4) & THREE_BIT_MASK;
         int rcode = flags & NIBBLE_MASK;
-        return new Result<>(new DNSHeader(id, qr, opcode, aa, tc, rd, ra, z, Rcode.fromInt(rcode)), 2);
+        int qdcount = (in[4] & UNSIGNED_MASK) << 8 | in[5] & UNSIGNED_MASK;
+        int ancount = (in[6] & UNSIGNED_MASK) << 8 | in[7] & UNSIGNED_MASK;
+        int nscount = (in[8] & UNSIGNED_MASK) << 8 | in[9] & UNSIGNED_MASK;
+        int arcount = (in[10] & UNSIGNED_MASK) << 8 | in[11] & UNSIGNED_MASK;
+        return new Result<>(
+                new DNSHeader(id,
+                        qr,
+                        opcode,
+                        aa,
+                        tc,
+                        rd,
+                        ra,
+                        z,
+                        Rcode.fromInt(rcode),
+                        qdcount,
+                        ancount,
+                        nscount,
+                        arcount
+                ),
+                12);
     }
 }
