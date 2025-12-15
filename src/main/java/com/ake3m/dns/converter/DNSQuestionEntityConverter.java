@@ -6,12 +6,31 @@ import com.ake3m.dns.model.QType;
 
 public class DNSQuestionEntityConverter {
     public Result<DNSQuestion> read(byte[] in, int offset) {
-        StringBuilder qname = new StringBuilder();
+        Result<String> qname = readName(in, offset);
+        offset = qname.offset();
+        int qtype = ByteConverter.readU16(in, offset);
+        offset += 2;
+        int qclass = ByteConverter.readU16(in, offset);
+        offset += 2;
 
+        return new Result<>(new DNSQuestion(qname.value(), QType.fromInt(qtype), QClass.fromInt(qclass)), offset);
+    }
+
+    Result<String> readName(byte[] in, int offset) {
+        StringBuilder qname = new StringBuilder();
+        boolean jumped = false;
         for (int i = offset; i < in.length; i++) {
             int length = in[i] & 0xFF;
             if (length == 0) {
                 break;
+            }
+
+            if (length == 0xC0) {
+                int pointer = in[i + 1] & 0xFF;
+                i = pointer - 1;
+                jumped = true;
+                offset++;
+                continue;
             }
 
             int adjustedIdx = 0;
@@ -25,18 +44,17 @@ public class DNSQuestionEntityConverter {
             }
 
             i = adjustedIdx;
-            offset = i + 1;
+            if (!jumped) {
+                offset = i + 1;
+            }
         }
 
         if (!qname.isEmpty()) {
             qname.setLength(qname.length() - 1);
         }
-        offset++;
-        int qtype = ByteConverter.readU16(in, offset);
-        offset += 2;
-        int qclass = ByteConverter.readU16(in, offset);
-        offset += 2;
 
-        return new Result<>(new DNSQuestion(qname.toString(), QType.fromInt(qtype), QClass.fromInt(qclass)), offset);
+        offset++;
+
+        return new Result<>(qname.toString(), offset);
     }
 }
