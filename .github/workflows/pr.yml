@@ -44,26 +44,41 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sdkman-
 
-      - name: Install SDKMAN
+      - name: Ensure SDKMAN installed
         shell: bash
         run: |
-          curl -s "https://get.sdkman.io" | bash
+          set -euo pipefail
+          export SDKMAN_DIR="$HOME/.sdkman"
+
+          if [[ ! -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]]; then
+            echo "SDKMAN init not found at $SDKMAN_DIR/bin/sdkman-init.sh"
+            echo "Reinstalling SDKMAN..."
+            rm -rf "$SDKMAN_DIR"
+            curl -s "https://get.sdkman.io" | bash
+          fi
+
+          source "$SDKMAN_DIR/bin/sdkman-init.sh"
+          sdk version
 
       - name: Install toolchain from .sdkmanrc
         shell: bash
         env:
           sdkman_auto_answer: "true"
         run: |
-          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          set -euo pipefail
+          export SDKMAN_DIR="$HOME/.sdkman"
+          source "$SDKMAN_DIR/bin/sdkman-init.sh"
+
           test -f .sdkmanrc
           sdk env install
           sdk env
-
           java -version
 
       - name: Run tests
         shell: bash
         run: |
-          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          set -euo pipefail
+          export SDKMAN_DIR="$HOME/.sdkman"
+          source "$SDKMAN_DIR/bin/sdkman-init.sh"
           sdk env
           ./gradlew test --no-daemon
