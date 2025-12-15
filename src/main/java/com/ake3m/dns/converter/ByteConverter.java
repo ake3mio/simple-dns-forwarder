@@ -14,6 +14,12 @@ public class ByteConverter {
         return result;
     }
 
+    public static int writeU16(byte[] out, int offset, int value) {
+        out[offset++] = (byte) (value >>> 8);
+        out[offset++] = (byte) value;
+        return offset;
+    }
+
     public static long readU32(byte[] in, int offset) {
         long result = 0;
 

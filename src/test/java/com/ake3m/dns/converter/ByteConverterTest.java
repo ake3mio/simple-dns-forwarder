@@ -46,4 +46,12 @@ class ByteConverterTest {
         assertEquals(value1, ByteConverter.readBits((int) value, 24, 8));
         assertEquals(value2, ByteConverter.readBits((int) value, 8, 16));
     }
+
+    @Test
+    void writeU16() {
+       int value = 258;
+       byte[] out = new byte[2];
+       ByteConverter.writeU16(out, 0, value);
+       assertEquals(value, ByteConverter.readU16(out, 0));
+    }
 }

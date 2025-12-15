@@ -9,7 +9,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static com.ake3m.dns.converter.ByteConverter.readU16;
-import static com.ake3m.dns.converter.DNSHeaderEntityConverterTest.Reader.createMockFlags;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class DNSHeaderEntityConverterTest {
@@ -268,7 +267,7 @@ class DNSHeaderEntityConverterTest {
             assertEquals(arcount, header.value().arcount());
         }
 
-        static int createMockFlags(int value) {
+        private static int createMockFlags(int value) {
             int flags = 1 << 15;
             flags |= value << 11;
             flags |= value << 10;
@@ -548,19 +547,118 @@ class DNSHeaderEntityConverterTest {
 
         @Test
         void shouldWriteQdcount() {
+            int expected = 5;
+            var header = new DNSHeader(
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    Rcode.NOERROR,
+                    expected,
+                    0,
+                    0,
+                    0
+            );
 
+            byte[] out = new byte[12];
+
+            int offset = converter.write(header, out);
+
+            int qdcount = readU16(out, 4);
+
+            assertEquals(12, offset);
+            assertEquals(expected, qdcount);
         }
 
         @Test
         void shouldWriteAncount() {
+            int expected = 4;
+            var header = new DNSHeader(
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    Rcode.NOERROR,
+                    0,
+                    expected,
+                    0,
+                    0
+            );
+
+            byte[] out = new byte[12];
+
+            int offset = converter.write(header, out);
+
+            int ancount = readU16(out, 6);
+
+            assertEquals(12, offset);
+            assertEquals(expected, ancount);
         }
 
         @Test
         void shouldWriteNscount() {
+            int expected = 3;
+            var header = new DNSHeader(
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    Rcode.NOERROR,
+                    0,
+                    0,
+                    expected,
+                    0
+            );
+
+            byte[] out = new byte[12];
+
+            int offset = converter.write(header, out);
+
+            int nscount = readU16(out, 8);
+
+            assertEquals(12, offset);
+            assertEquals(expected, nscount);
         }
 
         @Test
         void shouldWriteArcount() {
+            int expected = 3;
+            var header = new DNSHeader(
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    Rcode.NOERROR,
+                    0,
+                    0,
+                    0,
+                    expected
+            );
+
+            byte[] out = new byte[12];
+
+            int offset = converter.write(header, out);
+
+            int arcount = readU16(out, 10);
+
+            assertEquals(12, offset);
+            assertEquals(expected, arcount);
         }
     }
 }

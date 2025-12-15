@@ -3,8 +3,7 @@ package com.ake3m.dns.converter;
 import com.ake3m.dns.model.DNSHeader;
 import com.ake3m.dns.model.Rcode;
 
-import static com.ake3m.dns.converter.ByteConverter.readBits;
-import static com.ake3m.dns.converter.ByteConverter.readU16;
+import static com.ake3m.dns.converter.ByteConverter.*;
 
 /**
  * This was implemented following the RFC 1035
@@ -46,9 +45,17 @@ public class DNSHeaderEntityConverter {
     }
 
     public int write(DNSHeader header, byte[] out) {
-        out[0] = (byte) ((header.id() >>> 8) & 0xFF);
-        out[1] = (byte) (header.id() & 0xFF);
+        int flags = getFlags(header);
+        int offset = writeU16(out, 0, header.id());
+        offset = writeU16(out, offset, flags);
+        offset = writeU16(out, offset, header.qdcount());
+        offset = writeU16(out, offset, header.ancount());
+        offset = writeU16(out, offset, header.nscount());
+        offset = writeU16(out, offset, header.arcount());
+        return offset;
+    }
 
+    private static int getFlags(DNSHeader header) {
         int flags = 0;
         flags |= header.qr() << 15;
         flags |= header.opcode() << 11;
@@ -58,9 +65,6 @@ public class DNSHeaderEntityConverter {
         flags |= header.ra() << 7;
         flags |= header.z() << 4;
         flags |= header.rcode().code();
-
-        out[2] = (byte) ((flags >>> 8) & 0xFF);
-        out[3] = (byte) (flags & 0xFF);
-        return 12;
+        return flags;
     }
 }
