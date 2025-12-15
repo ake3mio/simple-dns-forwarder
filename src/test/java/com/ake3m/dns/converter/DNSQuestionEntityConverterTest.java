@@ -10,7 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import static com.ake3m.dns.converter.ByteConverter.writeU16;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class DNSQuestionEntityConverterTest {
     private DNSQuestionEntityConverter converter;
@@ -80,6 +80,47 @@ class DNSQuestionEntityConverterTest {
 
             assertEquals(12, questionResult.offset());
             assertEquals(qclass, questionResult.value().qclass());
+        }
+    }
+
+    @Nested
+    class Writer {
+        @Test
+        void shouldWriteQname() {
+            DNSQuestion dnsQuestion = new DNSQuestion("VENERA.ISI.EDU", QType.A, QClass.IN);
+
+            byte[] out = new byte[512];
+            int offset = converter.write(dnsQuestion, 0, out);
+            Result<String> roundTripped = converter.readName(out, 0);
+
+            assertEquals(20, offset);
+            assertEquals(dnsQuestion.qname(), roundTripped.value());
+        }
+
+        @EnumSource(QType.class)
+        @ParameterizedTest
+        void shouldWriteQtype(QType qtype) {
+            DNSQuestion dnsQuestion = new DNSQuestion("VENERA.ISI.EDU", qtype, QClass.IN);
+
+            byte[] out = new byte[512];
+            int offset = converter.write(dnsQuestion, 0, out);
+            Result<DNSQuestion> roundTripped = converter.read(out, 0);
+
+            assertEquals(20, offset);
+            assertEquals(dnsQuestion.qtype(), roundTripped.value().qtype());
+        }
+
+        @EnumSource(QClass.class)
+        @ParameterizedTest
+        void shouldWriteQclass(QClass aclass) {
+            DNSQuestion dnsQuestion = new DNSQuestion("VENERA.ISI.EDU", QType.A, aclass);
+
+            byte[] out = new byte[512];
+            int offset = converter.write(dnsQuestion, 0, out);
+            Result<DNSQuestion> roundTripped = converter.read(out, 0);
+
+            assertEquals(20, offset);
+            assertEquals(dnsQuestion.qclass(), roundTripped.value().qclass());
         }
     }
 }

@@ -4,6 +4,8 @@ import com.ake3m.dns.model.DNSQuestion;
 import com.ake3m.dns.model.QClass;
 import com.ake3m.dns.model.QType;
 
+import static com.ake3m.dns.converter.ByteConverter.writeU16;
+
 public class DNSQuestionEntityConverter {
     public Result<DNSQuestion> read(byte[] in, int offset) {
         Result<String> qname = readName(in, offset);
@@ -56,5 +58,22 @@ public class DNSQuestionEntityConverter {
         offset++;
 
         return new Result<>(qname.toString(), offset);
+    }
+
+    public int write(DNSQuestion dnsQuestion, int offset, byte[] out) {
+        String[] parts = dnsQuestion.qname().split("\\.");
+
+        for (String part : parts) {
+            out[offset++] = (byte) part.length();
+            for (int i = 0; i < part.length(); i++) {
+                out[offset++] = (byte) part.charAt(i);
+            }
+        }
+        out[offset++] = 0;
+
+        offset = writeU16(out, offset, dnsQuestion.qtype().code());
+        offset = writeU16(out, offset, dnsQuestion.qclass().code());
+
+        return offset;
     }
 }
