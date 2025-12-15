@@ -44,4 +44,23 @@ public class DNSHeaderEntityConverter {
                 ),
                 12);
     }
+
+    public int write(DNSHeader header, byte[] out) {
+        out[0] = (byte) ((header.id() >>> 8) & 0xFF);
+        out[1] = (byte) (header.id() & 0xFF);
+
+        int flags = 0;
+        flags |= header.qr() << 15;
+        flags |= header.opcode() << 11;
+        flags |= header.aa() << 10;
+        flags |= header.tc() << 9;
+        flags |= header.rd() << 8;
+        flags |= header.ra() << 7;
+        flags |= header.z() << 4;
+        flags |= header.rcode().code();
+
+        out[2] = (byte) ((flags >>> 8) & 0xFF);
+        out[3] = (byte) (flags & 0xFF);
+        return 12;
+    }
 }
