@@ -1,0 +1,69 @@
+name: PR
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v2
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/gradle.properties', '**/settings.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache SDKMAN
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.sdkman/archives
+            ~/.sdkman/candidates
+          key: ${{ runner.os }}-sdkman-${{ hashFiles('.sdkmanrc') }}
+          restore-keys: |
+            ${{ runner.os }}-sdkman-
+
+      - name: Install SDKMAN
+        shell: bash
+        run: |
+          curl -s "https://get.sdkman.io" | bash
+
+      - name: Install toolchain from .sdkmanrc
+        shell: bash
+        env:
+          sdkman_auto_answer: "true"
+        run: |
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          test -f .sdkmanrc
+          sdk env install
+          sdk env
+
+          java -version
+
+      - name: Run tests
+        shell: bash
+        run: |
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          sdk env
+          ./gradlew test --no-daemon
