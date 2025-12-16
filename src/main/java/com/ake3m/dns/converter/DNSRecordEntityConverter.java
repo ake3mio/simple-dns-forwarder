@@ -14,8 +14,8 @@ public class DNSRecordEntityConverter {
         offset += 2;
         int qclass = ByteConverter.readU16(in, offset);
         offset += 2;
-        int ttl = ByteConverter.readU16(in, offset);
-        offset += 2;
+        long ttl = ByteConverter.readU32(in, offset);
+        offset += 4;
         int rdlength = ByteConverter.readU16(in, offset);
         offset += 2;
         Result<String> result = readRdata(in, offset, qtype, rdlength);
@@ -29,7 +29,7 @@ public class DNSRecordEntityConverter {
         offset = writeName(dnsRecord.name(), offset, out);
         offset = writeU16(out, offset, dnsRecord.qtype().code());
         offset = writeU16(out, offset, dnsRecord.qclass().code());
-        offset = writeU16(out, offset, dnsRecord.ttl());
+        offset = writeU32(out, offset, dnsRecord.ttl());
         offset = writeU16(out, offset, dnsRecord.rdlength());
         offset = writeRdata(out, offset, dnsRecord.rdata(), dnsRecord.qtype());
         return offset;

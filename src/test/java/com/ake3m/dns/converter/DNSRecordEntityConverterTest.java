@@ -33,7 +33,7 @@ class DNSRecordEntityConverterTest {
             off = writeName("EXAMPLE.COM", off, buf);
             off = writeU16(buf, off, QType.A.code());
             off = writeU16(buf, off, QClass.IN.code());
-            off = writeU16(buf, off, 300);
+            off = ByteConverter.writeU32(buf, off, 300);
             off = writeU16(buf, off, 4);
             off = writeIPv4("93.184.216.34", off, buf);
 
@@ -57,7 +57,7 @@ class DNSRecordEntityConverterTest {
             off = writeName("HOST.EXAMPLE", off, buf);
             off = writeU16(buf, off, QType.AAAA.code());
             off = writeU16(buf, off, QClass.IN.code());
-            off = writeU16(buf, off, 120);
+            off = ByteConverter.writeU32(buf, off, 120);
             off = writeU16(buf, off, 16);
             off = writeIPv6("2001:db8::1", off, buf);
 
@@ -84,7 +84,7 @@ class DNSRecordEntityConverterTest {
             off = writeName("EXAMPLE.COM", off, buf);
             off = writeU16(buf, off, QType.NS.code());
             off = writeU16(buf, off, QClass.IN.code());
-            off = writeU16(buf, off, 60);
+            off = ByteConverter.writeU32(buf, off, 60);
             int rdLenPos = off;
             off = writeU16(buf, off, 0);
             int rdStart = off;
@@ -109,7 +109,7 @@ class DNSRecordEntityConverterTest {
             off = writeName("TXT.EXAMPLE", off, buf);
             off = writeU16(buf, off, QType.TXT.code());
             off = writeU16(buf, off, QClass.IN.code());
-            off = writeU16(buf, off, 10);
+            off = ByteConverter.writeU32(buf, off, 10);
             int rdStart = off + 2;
             int rdoff = writeTXT("hello world", rdStart, buf);
             int rdlength = rdoff - rdStart;
@@ -133,7 +133,7 @@ class DNSRecordEntityConverterTest {
             off = writeName("EXAMPLE.COM", off, buf);
             off = writeU16(buf, off, QType.SOA.code());
             off = writeU16(buf, off, QClass.IN.code());
-            off = writeU16(buf, off, 100);
+            off = ByteConverter.writeU32(buf, off, 100);
             int rdStart = off + 2;
             String soa = "ns.example.com hostmaster.example.com 2025010101 7200 3600 1209600 300";
             int rdoff = writeSOA(soa, rdStart, buf);

@@ -8,7 +8,7 @@ public record DNSRecord(
         String name,
         QType qtype,
         QClass qclass,
-        int ttl,
+        long ttl,
         int rdlength,
         String rdata
 ) {
