@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import static com.ake3m.dns.converter.ByteConverter.readName;
 import static com.ake3m.dns.converter.ByteConverter.writeU16;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -91,7 +92,7 @@ class DNSQuestionEntityConverterTest {
 
             byte[] out = new byte[512];
             int offset = converter.write(dnsQuestion, 0, out);
-            Result<String> roundTripped = converter.readName(out, 0);
+            Result<String> roundTripped = readName(out, 0);
 
             assertEquals(20, offset);
             assertEquals(dnsQuestion.qname(), roundTripped.value());
