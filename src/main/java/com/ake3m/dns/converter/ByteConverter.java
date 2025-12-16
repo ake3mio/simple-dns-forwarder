@@ -233,46 +233,68 @@ public class ByteConverter {
     }
 
     public static Result<String> readName(byte[] in, int offset) {
-        StringBuilder qname = new StringBuilder();
+        StringBuilder name = new StringBuilder();
+        int pos = offset;
+        int consumed = 0;
         boolean jumped = false;
-        for (int i = offset; i < in.length; i++) {
-            int length = in[i] & 0xFF;
-            if (length == 0) {
+
+        while (true) {
+            if (pos >= in.length) {
+                throw new IllegalArgumentException("DNS name exceeds packet length");
+            }
+
+            int len = in[pos] & 0xFF;
+
+
+            if (len == 0) {
+                if (!jumped) {
+                    consumed++;
+                }
                 break;
             }
 
-            if ((length & 0xC0) == 0xC0) {
-                int pointer = in[i + 1] & 0xFF;
-                i = pointer - 1;
+
+            if ((len & 0xC0) == 0xC0) {
+                if (pos + 1 >= in.length) {
+                    throw new IllegalArgumentException("Truncated DNS compression pointer");
+                }
+
+                int pointer =
+                        ((len & 0x3F) << 8) |
+                                (in[pos + 1] & 0xFF);
+
+                if (!jumped) {
+                    consumed += 2;
+                }
+
+                pos = pointer;
                 jumped = true;
-                offset++;
                 continue;
             }
 
-            int adjustedIdx = 0;
-            for (int j = 0; j < length; j++) {
-                int idx = i + j + 1;
-                qname.append((char) in[idx]);
-                adjustedIdx = idx;
-            }
-            if (i + length + 1 < in.length) {
-                qname.append('.');
+
+            pos++;
+            if (pos + len > in.length) {
+                throw new IllegalArgumentException("Truncated DNS label");
             }
 
-            i = adjustedIdx;
+            if (!name.isEmpty()) {
+                name.append('.');
+            }
+
+            for (int i = 0; i < len; i++) {
+                name.append((char) (in[pos + i] & 0xFF));
+            }
+
+            pos += len;
             if (!jumped) {
-                offset = i + 1;
+                consumed += len + 1;
             }
         }
 
-        if (!qname.isEmpty()) {
-            qname.setLength(qname.length() - 1);
-        }
-
-        offset++;
-
-        return new Result<>(qname.toString(), offset);
+        return new Result<>(name.toString(), offset + consumed);
     }
+
 
     public static int writeName(String value, int offset, byte[] out) {
         String[] parts = value.split("\\.");

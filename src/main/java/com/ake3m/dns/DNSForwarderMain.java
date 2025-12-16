@@ -20,14 +20,14 @@ public class DNSForwarderMain {
 
         Arguments arguments = Arguments.parse(args);
 
-        log.info("Starting DNS forwarder with resolver {}:{}", arguments.resolverIp(), arguments.resolverPort());
+        log.info("Starting DNS forwarder with arguments {}", arguments);
 
         Converter converter = new Converter(
                 new DNSHeaderEntityConverter(),
                 new DNSQuestionEntityConverter(),
                 new DNSRecordEntityConverter());
 
-        DNSClient dnsClient = new DNSClient(arguments.resolverIp(), arguments.resolverPort(), Executors.newSingleThreadExecutor(), converter);
+        DNSClient dnsClient = new DNSClient(arguments.resolverIp(), arguments.resolverPort(), converter);
         List<DNSHandler.Interceptor> requestInterceptors = List.of(new RequestInterceptor());
         List<DNSHandler.Interceptor> responseInterceptors = List.of(new ResponseInterceptor());
         DNSHandler handler = new DNSHandler(dnsClient, requestInterceptors, responseInterceptors);

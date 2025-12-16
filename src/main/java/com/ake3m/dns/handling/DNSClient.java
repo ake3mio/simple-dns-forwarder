@@ -1,61 +1,108 @@
 package com.ake3m.dns.handling;
 
 import com.ake3m.dns.model.DNSMessage;
+import com.ake3m.dns.model.Rcode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.SocketException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.net.*;
+import java.time.Duration;
+import java.util.concurrent.*;
 
-public class DNSClient {
+import static com.ake3m.dns.handling.Either.left;
+import static com.ake3m.dns.handling.Either.right;
+
+public final class DNSClient implements AutoCloseable {
+
+    private static final Logger log = LoggerFactory.getLogger(DNSClient.class);
+    public static final int TIMEOUT_SECONDS = 30;
+
     private final DatagramSocket socket;
-    private final ExecutorService executorService;
+    private final ExecutorService executor;
     private final Converter converter;
 
     public DNSClient(
             String ip,
             int port,
-            ExecutorService executorService,
-            Converter converter) throws SocketException {
-        this.executorService = executorService;
+            Converter converter
+    ) throws SocketException {
+
         this.converter = converter;
+
+        this.executor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "dns-client");
+            t.setDaemon(true);
+            return t;
+        });
+
         this.socket = new DatagramSocket();
-        socket.connect(new InetSocketAddress(ip, port));
+        this.socket.connect(new InetSocketAddress(ip, port));
+        this.socket.setSoTimeout(TIMEOUT_SECONDS * 1000);
     }
 
-    public CompletableFuture<DNSMessage> forward(DNSMessage message) {
-        return CompletableFuture.supplyAsync(() -> {
-            byte[] in = converter.toDNSRequest(message);
-            forward(in);
-            byte[] out = new byte[512];
-            receive(out);
-            return converter.toDNSResponse(out);
-        }, executorService).orTimeout(30, TimeUnit.SECONDS);
+    public CompletableFuture<Either<DNSError, DNSMessage>> forward(DNSMessage message) {
+        return CompletableFuture
+                .supplyAsync(() -> sendAndReceive(message), executor)
+                .exceptionally(ex -> handleFailure(ex, message));
     }
 
-    private void receive(byte[] out) {
-        DatagramPacket responsePacket = new DatagramPacket(out, out.length);
+    private Either<DNSError, DNSMessage> sendAndReceive(DNSMessage message) {
         try {
-            socket.receive(responsePacket);
+
+            synchronized (socket) {
+                byte[] request = converter.toDNSRequest(message);
+                socket.send(new DatagramPacket(request, request.length));
+
+                byte[] buffer = new byte[512];
+                DatagramPacket response = new DatagramPacket(buffer, buffer.length);
+                socket.receive(response);
+
+                DNSMessage dnsResponse = converter.toDNSResponse(response.getData());
+
+                if (dnsResponse.header().rcode() != Rcode.NOERROR) {
+                    return left(
+                            new DNSError.RcodeFailure(dnsResponse.header().rcode()),
+                            converter.toDNSErrorResponse(dnsResponse)
+                    );
+                }
+
+                return right(dnsResponse);
+            }
+
+        } catch (SocketTimeoutException e) {
+            return left(
+                    new DNSError.UpstreamTimeout(Duration.ofSeconds(TIMEOUT_SECONDS)),
+                    converter.toDNSErrorResponse(message)
+            );
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            return left(
+                    new DNSError.UpstreamFailure(e),
+                    converter.toDNSErrorResponse(message)
+            );
         }
     }
 
-    private void forward(byte[] in) {
-        DatagramPacket requestPacket = new DatagramPacket(in, in.length);
-        try {
-            socket.send(requestPacket);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    private Either<DNSError, DNSMessage> handleFailure(Throwable ex, DNSMessage message) {
+        Throwable cause = unwrap(ex);
+        log.error("DNS client failure", cause);
+
+        return left(
+                new DNSError.InternalError(cause),
+                converter.toDNSErrorResponse(message)
+        );
     }
 
+    @Override
     public void close() {
         socket.close();
+        executor.shutdownNow();
+    }
+
+    private static Throwable unwrap(Throwable t) {
+        if (t instanceof CompletionException || t instanceof ExecutionException) {
+            return t.getCause() != null ? t.getCause() : t;
+        }
+        return t;
     }
 }

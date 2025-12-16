@@ -57,7 +57,9 @@ Limitations / Future work
 - Static 512-byte buffers; dynamic sizing or truncation handling could be added
 - Minimal CLI/configuration; consider adding flags for upstream server timeout and logging
 - Support for multiple upstream servers
+- Switch to using NIO for UDP sockets
 - Support reading DNS routing policies from a file
+- More robust error handling - this is a very simple implementation for learning purposes
 
 License
 

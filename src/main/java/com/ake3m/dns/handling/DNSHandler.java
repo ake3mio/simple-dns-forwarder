@@ -18,8 +18,10 @@ public class DNSHandler implements DNSServer.Handler {
     }
 
     @Override
-    public CompletableFuture<DNSMessage> handle(DNSMessage request) {
-        return dnsClient.forward(requestInterceptor.apply(request)).thenApply(responseInterceptor);
+    public CompletableFuture<Either<DNSError, DNSMessage>> handle(DNSMessage request) {
+        return dnsClient
+                .forward(requestInterceptor.apply(request))
+                .thenApply(e -> e.mapRight(responseInterceptor));
     }
 
     private Function<DNSMessage, DNSMessage> intercept(List<Interceptor> interceptors) {
