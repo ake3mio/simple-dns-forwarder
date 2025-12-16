@@ -3,22 +3,14 @@ package com.ake3m.dns.handling;
 import com.ake3m.dns.converter.DNSHeaderEntityConverter;
 import com.ake3m.dns.converter.DNSQuestionEntityConverter;
 import com.ake3m.dns.converter.DNSRecordEntityConverter;
-import com.ake3m.dns.model.DNSHeader;
-import com.ake3m.dns.model.DNSMessage;
-import com.ake3m.dns.model.DNSQuestion;
-import com.ake3m.dns.model.DNSRecord;
-import com.ake3m.dns.model.QClass;
-import com.ake3m.dns.model.QType;
-import com.ake3m.dns.model.Rcode;
-import org.junit.jupiter.api.AfterEach;
+import com.ake3m.dns.handling.Either.Right;
+import com.ake3m.dns.model.*;
 import org.junit.jupiter.api.Test;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -30,13 +22,6 @@ class DNSHandlerTest {
     private final DNSQuestionEntityConverter questionConv = new DNSQuestionEntityConverter();
     private final DNSRecordEntityConverter recordConv = new DNSRecordEntityConverter();
     private final Converter converter = new Converter(headerConv, questionConv, recordConv);
-
-    private ExecutorService executor;
-
-    @AfterEach
-    void cleanup() {
-        if (executor != null) executor.shutdownNow();
-    }
 
     @Test
     void handlerAppliesInterceptorsAndUsesClient() throws Exception {
@@ -75,8 +60,7 @@ class DNSHandlerTest {
             t.setDaemon(true);
             t.start();
 
-            executor = Executors.newSingleThreadExecutor();
-            DNSClient client = new DNSClient("127.0.0.1", port, executor, converter);
+            DNSClient client = new DNSClient("127.0.0.1", port, converter);
 
             DNSHandler.Interceptor reqInt = (msg, chain) -> {
                 DNSQuestion q = msg.questions()[0];
@@ -96,7 +80,8 @@ class DNSHandlerTest {
             DNSQuestion q = new DNSQuestion("EXAMPLE.COM", QType.A, QClass.IN);
             DNSMessage request = new DNSMessage(h, new DNSQuestion[]{q}, new DNSRecord[]{}, new DNSRecord[]{}, new DNSRecord[]{});
 
-            DNSMessage response = handler.handle(request).get(3, TimeUnit.SECONDS);
+            Right<DNSError, DNSMessage> either = (Right<DNSError, DNSMessage>) handler.handle(request).get(3, TimeUnit.SECONDS);
+            DNSMessage response = either.data();
 
             assertEquals("PREFIX.EXAMPLE.COM", observedQName.get());
             assertEquals(1, response.answers().length);

@@ -88,18 +88,18 @@ class DNSClientTest {
             serverThread.start();
 
             executor = Executors.newSingleThreadExecutor();
-            DNSClient client = new DNSClient("127.0.0.1", port, executor, converter);
+            DNSClient client = new DNSClient("127.0.0.1", port, converter);
 
             DNSHeader header = new DNSHeader(0x4455, 0, 0, 0, 0, 1, 0, 0, Rcode.NOERROR, 1, 0, 0, 0);
             DNSQuestion q = new DNSQuestion("EXAMPLE.COM", QType.A, QClass.IN);
             DNSMessage request = new DNSMessage(header, new DNSQuestion[]{q}, new DNSRecord[]{}, new DNSRecord[]{}, new DNSRecord[]{});
 
-            DNSMessage response = client.forward(request).get(3, TimeUnit.SECONDS);
-
-            assertEquals(1, response.header().qr());
-            assertEquals(1, response.answers().length);
-            assertEquals("EXAMPLE.COM", response.answers()[0].name());
-            assertEquals("93.184.216.34", response.answers()[0].rdata());
+            Either.Right<DNSError, DNSMessage> response = (Either.Right<DNSError, DNSMessage>) client.forward(request).get(3, TimeUnit.SECONDS);
+            DNSMessage data = response.data();
+            assertEquals(1, data.header().qr());
+            assertEquals(1, data.answers().length);
+            assertEquals("EXAMPLE.COM", data.answers()[0].name());
+            assertEquals("93.184.216.34", data.answers()[0].rdata());
 
             assertTrue(handled.await(1, TimeUnit.SECONDS));
 

@@ -34,18 +34,26 @@ public class DNSServer {
                 log.info("Received dns packet");
                 DNSMessage request = converter.toDNSRequest(in);
                 handler.handle(request)
-                        .exceptionally(throwable -> {
-                            log.error("Error handling dns packet", throwable);
-                            return converter.toDNSErrorResponse(request);
-                        })
                         .thenAccept(response -> {
-                            log.info("Responding to dns packet");
-                            byte[] out = converter.toDNSResponse(response);
-                            DatagramPacket responsePacket = new DatagramPacket(out, out.length, requestPacket.getSocketAddress());
-                            send(serverSocket, responsePacket);
+                            switch (response) {
+                                case Either.Left<DNSError, DNSMessage> left -> {
+                                    log.error("Error handling dns packet: {}", left.error());
+                                    send(left.data(), requestPacket, serverSocket);
+                                }
+                                case Either.Right<DNSError, DNSMessage> right -> {
+                                    log.info("Responding to dns packet");
+                                    send(right.data(), requestPacket, serverSocket);
+                                }
+                            }
                         });
             }
         }
+    }
+
+    private void send(DNSMessage left, DatagramPacket requestPacket, DatagramSocket serverSocket) {
+        byte[] out = converter.toDNSResponse(left);
+        DatagramPacket responsePacket = new DatagramPacket(out, out.length, requestPacket.getSocketAddress());
+        send(serverSocket, responsePacket);
     }
 
     private static void send(DatagramSocket serverSocket, DatagramPacket responsePacket) {
@@ -57,6 +65,6 @@ public class DNSServer {
     }
 
     public interface Handler {
-        CompletableFuture<DNSMessage> handle(DNSMessage message);
+        CompletableFuture<Either<DNSError, DNSMessage>> handle(DNSMessage message);
     }
 }

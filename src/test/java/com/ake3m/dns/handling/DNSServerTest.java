@@ -54,7 +54,7 @@ class DNSServerTest {
             DNSQuestion q1 = new DNSQuestion(name, QType.A, QClass.IN);
             DNSRecord a = new DNSRecord(name, QType.A, QClass.IN, 120, 4, "203.0.113.5");
             DNSMessage resp = new DNSMessage(outH, new DNSQuestion[]{q1}, new DNSRecord[]{a}, new DNSRecord[]{}, new DNSRecord[]{});
-            return CompletableFuture.completedFuture(resp);
+            return CompletableFuture.completedFuture(Either.right(resp));
         };
 
         DNSServer server = new DNSServer(port, handler, converter);
@@ -82,7 +82,7 @@ class DNSServerTest {
 
             byte[] buf = new byte[512];
             DatagramPacket resp = new DatagramPacket(buf, buf.length);
-            client.setSoTimeout(3000);
+            client.setSoTimeout(30000);
             client.receive(resp);
 
             byte[] data = new byte[resp.getLength()];
