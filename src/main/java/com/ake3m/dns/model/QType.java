@@ -20,7 +20,9 @@ public enum QType {
     HINFO(13),
     MINFO(14),
     MX(15),
-    TXT(16);
+    TXT(16),
+    // https://www.rfc-editor.org/rfc/rfc3596
+    AAAA(28);
     private final int code;
 
     QType(int code) {

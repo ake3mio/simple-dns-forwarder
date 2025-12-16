@@ -24,61 +24,18 @@ jobs:
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v2
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/gradle.properties', '**/settings.gradle*') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Cache SDKMAN
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.sdkman/archives
-            ~/.sdkman/candidates
-          key: ${{ runner.os }}-sdkman-${{ hashFiles('.sdkmanrc') }}
-          restore-keys: |
-            ${{ runner.os }}-sdkman-
-
-      - name: Ensure SDKMAN installed
-        shell: bash
-        run: |
-          set -euo pipefail
-          export SDKMAN_DIR="$HOME/.sdkman"
-
-          if [[ ! -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]]; then
-            echo "SDKMAN init not found at $SDKMAN_DIR/bin/sdkman-init.sh"
-            echo "Reinstalling SDKMAN..."
-            rm -rf "$SDKMAN_DIR"
-            curl -s "https://get.sdkman.io" | bash
-          fi
-
-          source "$SDKMAN_DIR/bin/sdkman-init.sh"
-          sdk version
-
-      - name: Install toolchain from .sdkmanrc
+      - name: Install SDKMAN + toolchain from .sdkmanrc
         shell: bash
         env:
           sdkman_auto_answer: "true"
         run: |
-          set -euo pipefail
-          export SDKMAN_DIR="$HOME/.sdkman"
-          source "$SDKMAN_DIR/bin/sdkman-init.sh"
+          rm -rf "$SDKMAN_DIR"
+          curl -s "https://get.sdkman.io" | bash
+
+          source "/home/runner/.sdkman/bin/sdkman-init.sh"
 
           test -f .sdkmanrc
           sdk env install
           sdk env
           java -version
-
-      - name: Run tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          export SDKMAN_DIR="$HOME/.sdkman"
-          source "$SDKMAN_DIR/bin/sdkman-init.sh"
-          sdk env
           ./gradlew test --no-daemon

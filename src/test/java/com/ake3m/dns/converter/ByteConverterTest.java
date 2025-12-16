@@ -2,6 +2,8 @@ package com.ake3m.dns.converter;
 
 import org.junit.jupiter.api.Test;
 
+import static com.ake3m.dns.converter.ByteConverter.readName;
+import static com.ake3m.dns.converter.ByteConverter.writeName;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ByteConverterTest {
@@ -49,9 +51,117 @@ class ByteConverterTest {
 
     @Test
     void writeU16() {
-       int value = 258;
-       byte[] out = new byte[2];
-       ByteConverter.writeU16(out, 0, value);
-       assertEquals(value, ByteConverter.readU16(out, 0));
+        int value = 258;
+        byte[] out = new byte[2];
+        ByteConverter.writeU16(out, 0, value);
+        assertEquals(value, ByteConverter.readU16(out, 0));
+    }
+
+    @Test
+    void shouldWriteQname() {
+        byte[] out = new byte[512];
+        String qname = "VENERA.ISI.EDU";
+        int offset = writeName(qname, 0, out);
+        Result<String> roundTripped = readName(out, 0);
+
+        assertEquals(16, offset);
+        assertEquals(qname, roundTripped.value());
+    }
+    @Test
+    void shouldReadQnameWithCompressionPointer() {
+        byte[] bytes = new byte[]{
+                6, 'V', 'E', 'N', 'E', 'R', 'A',
+                3, 'I', 'S', 'I',
+                3, 'E', 'D', 'U',
+                0x00,
+
+                4, 'M', 'A', 'I', 'L',
+                (byte) 0xC0, 0x07,
+        };
+
+        Result<String> q1 = readName(bytes, 0);
+        assertEquals(16, q1.offset());
+        assertEquals("VENERA.ISI.EDU", q1.value());
+
+        Result<String> q2 = readName(bytes, q1.offset());
+        assertEquals(23, q2.offset());
+        assertEquals("MAIL.ISI.EDU", q2.value());
+    }
+
+    @Test
+    void writeU32() {
+        long value = 0xDEADBEEFL;
+        byte[] out = new byte[4];
+        int off = ByteConverter.writeU32(out, 0, value);
+        assertEquals(4, off);
+        assertEquals(value, ByteConverter.readU32(out, 0));
+    }
+
+    @Test
+    void ipv4RoundTrip() {
+        String ip = "192.168.10.200";
+        byte[] out = new byte[4];
+        int off = ByteConverter.writeIPv4(ip, 0, out);
+        assertEquals(4, off);
+        Result<String> result = ByteConverter.readIPv4(out, 0);
+        assertEquals(4, result.offset());
+        assertEquals(ip, result.value());
+    }
+
+    @Test
+    void ipv6RoundTrip() {
+        String ip = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
+        byte[] out = new byte[16];
+        int off = ByteConverter.writeIPv6(ip, 0, out);
+        assertEquals(16, off);
+        Result<String> result = ByteConverter.readIPv6(out, 0);
+        assertEquals(16, result.offset());
+        byte[] out2 = new byte[16];
+        ByteConverter.writeIPv6(result.value(), 0, out2);
+        for (int i = 0; i < 16; i++) {
+            assertEquals(out[i], out2[i]);
+        }
+    }
+
+    @Test
+    void txtRoundTrip() {
+        String txt = "hello world from dns";
+        byte[] out = new byte[256];
+        int off = ByteConverter.writeTXT(txt, 0, out);
+        Result<String> result = ByteConverter.readTXT(out, 0, off);
+        assertEquals(off, result.offset());
+        assertEquals("hello world from dns", result.value());
+    }
+
+    @Test
+    void txtEmpty() {
+        String txt = "   ";
+        byte[] out = new byte[4];
+        int off = ByteConverter.writeTXT(txt, 0, out);
+        assertEquals(1, off);
+        Result<String> result = ByteConverter.readTXT(out, 0, off);
+        assertEquals("", result.value());
+        assertEquals(1, result.offset());
+    }
+
+    @Test
+    void writeHexProducesBytes() {
+        String hex = "0A0bFf";
+        byte[] out = new byte[3];
+        int off = ByteConverter.writeHex(hex, 0, out);
+        assertEquals(3, off);
+        assertEquals((byte) 0x0A, out[0]);
+        assertEquals((byte) 0x0B, out[1]);
+        assertEquals((byte) 0xFF, out[2]);
+    }
+
+    @Test
+    void soaRoundTrip() {
+        String rdata = "ns.example.com hostmaster.example.com 2025010101 7200 3600 1209600 300";
+        byte[] out = new byte[512];
+        int off = ByteConverter.writeSOA(rdata, 0, out);
+        Result<String> result = ByteConverter.readSOA(out, 0);
+        assertEquals(off, result.offset());
+        assertEquals(rdata, result.value());
     }
 }
